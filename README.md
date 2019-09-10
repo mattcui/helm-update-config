@@ -16,6 +16,7 @@ To change image tag of `smiling-penguin` release:
 helm update-config "cf.20190214.142635" --set-value image.tag=stable,kube.diego_cell_size=1
 helm update-config "cf.20190214.142635" --values file_path1
 helm update-config "cf.20190214.142635" --set-value image.tag=stable --values=file_path1
+helm  --tls --tls-ca-cert /tmp/helm_secret/ca.cert.pem --tls-cert /tmp/helm_secret/helm.cert.pem --tls-key /tmp/helm_secret/helm.key.pem update-config "cf.20190909.143636" --set-value sizing.diego_cell.count="1",kube.diego_cell_size="1"
 ```
 
 For the last sample command, the plugin will merge the key/value pairs specified in both --set-value and --value file, if there are different keys specified in both --set-value and --value file, then --set-value will override the value in --value file.
