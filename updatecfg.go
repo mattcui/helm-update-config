@@ -145,10 +145,6 @@ func newUpdatecfgCmd(client helm.Interface) *cobra.Command {
 	cmd.Flags().BoolVar(&flags.TLSVerify, "tls-verify", DefaultTLSVerify, "Enable TLS for request and verify remote")
 	cmd.Flags().BoolVar(&flags.TLSEnable, "tls", DefaultTLSEnable, "Use TLS in helm Client interactions")
 
-	if err := cmd.Execute(); err != nil {
-		os.Exit(1)
-	}
-
 	return cmd
 }
 
