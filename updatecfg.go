@@ -158,9 +158,12 @@ type updateConfigCommand struct {
 
 func (cmd *updateConfigCommand) run() error {
 	// In CFEE, a helm elease name is composed of ${NAMESPACE}.${VERSION_DATE}.${VERSION_TIME}.
-	str := strings.Split(cmd.release, ".")
-	ns := str[0]
-	ls, err := cmd.client.ListReleases(helm.ReleaseListNamespace(ns))
+	// str := strings.Split(cmd.release, ".")
+	// ns := str[0]
+	// ls, err := cmd.client.ListReleases(helm.ReleaseListNamespace(ns))
+
+	// This code supports to check a release from release name directly, no limitation on naming.
+	ls, err := cmd.client.ListReleases(helm.ReleaseListFilter(cmd.release))
 	if err != nil {
 		return err
 	}
