@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	cmd := newUpdatecfgCmd(nil)
+	cmd := newUpdatecfgCmd()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}

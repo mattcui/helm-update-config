@@ -1,5 +1,5 @@
 name: "update-config"
-version: "0.5.3"
+version: "0.6.0"
 usage: "update config of a running release"
 description: Update configuration values of a running release.
 ignoreFlags: false

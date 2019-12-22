@@ -4,28 +4,44 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v1"
+	flag "github.com/spf13/pflag"
+	"gopkg.in/yaml.v1"
+	"k8s.io/client-go/util/homedir"
 	"k8s.io/helm/pkg/helm"
+	helmEnv "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/strvals"
 	"k8s.io/helm/pkg/tlsutil"
 )
 
-const (
-	// DefaultTLSCaCert is the default value for HELM_TLS_CA_CERT
-	DefaultTLSCaCert = "$HELM_HOME/ca.pem"
-	// DefaultTLSCert is the default value for HELM_TLS_CERT
-	DefaultTLSCert = "$HELM_HOME/cert.pem"
-	// DefaultTLSKeyFile is the default value for HELM_TLS_KEY_FILE
-	DefaultTLSKeyFile = "$HELM_HOME/key.pem"
-	// DefaultTLSEnable is the default value for HELM_TLS_ENABLE
-	DefaultTLSEnable = false
-	// DefaultTLSVerify is the default value for HELM_TLS_VERIFY
-	DefaultTLSVerify = false
+//const (
+//	// DefaultTLSCaCert is the default value for HELM_TLS_CA_CERT
+//	DefaultTLSCaCert = "$HELM_HOME/ca.pem"
+//	// DefaultTLSCert is the default value for HELM_TLS_CERT
+//	DefaultTLSCert = "$HELM_HOME/cert.pem"
+//	// DefaultTLSKeyFile is the default value for HELM_TLS_KEY_FILE
+//	DefaultTLSKeyFile = "$HELM_HOME/key.pem"
+//	// DefaultTLSEnable is the default value for HELM_TLS_ENABLE
+//	DefaultTLSEnable = false
+//	// DefaultTLSVerify is the default value for HELM_TLS_VERIFY
+//	DefaultTLSVerify = false
+//)
+
+var (
+	settings        helmEnv.EnvSettings
+	DefaultHelmHome = filepath.Join(homedir.HomeDir(), ".helm")
 )
+
+func addCommonCmdOptions(f *flag.FlagSet) {
+	settings.AddFlagsTLS(f)
+	settings.InitTLS(f)
+
+	f.StringVar((*string)(&settings.Home), "home", DefaultHelmHome, "location of your Helm config. Overrides $HELM_HOME")
+}
 
 type cmdFlags struct {
 	cliValues  []string
@@ -64,7 +80,39 @@ func (v *ValueFiles) Set(value string) error {
 	return nil
 }
 
-func newUpdatecfgCmd(client helm.Interface) *cobra.Command {
+func createHelmClient() helm.Interface {
+	options := []helm.Option{helm.Host(os.Getenv("TILLER_HOST")), helm.ConnectTimeout(int64(30))}
+
+	if settings.TLSVerify || settings.TLSEnable {
+		tlsopts := tlsutil.Options{
+			ServerName:         settings.TLSServerName,
+			KeyFile:            settings.TLSKeyFile,
+			CertFile:           settings.TLSCertFile,
+			InsecureSkipVerify: true,
+		}
+
+		if settings.TLSVerify {
+			tlsopts.CaCertFile = settings.TLSCaCertFile
+			tlsopts.InsecureSkipVerify = false
+		}
+
+		tlscfg, err := tlsutil.ClientConfig(tlsopts)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			os.Exit(2)
+		}
+
+		options = append(options, helm.WithTLS(tlscfg))
+	}
+
+	return helm.NewClient(options...)
+}
+
+func isHelm3() bool {
+	return os.Getenv("TILLER_HOST") == ""
+}
+
+func newUpdatecfgCmd() *cobra.Command {
 	var flags cmdFlags
 
 	cmd := &cobra.Command{
@@ -79,53 +127,8 @@ func newUpdatecfgCmd(client helm.Interface) *cobra.Command {
 				}
 			}
 
-			options := []helm.Option{helm.Host(os.Getenv("TILLER_HOST"))}
-
-			if flags.TLSEnable {
-
-				tlsServerName := ""
-				tlsCaCertFile := DefaultTLSCaCert
-				tlsKeyFile := DefaultTLSKeyFile
-				tlsCertFile := DefaultTLSCert
-				if flags.TLSServerName != "" {
-					tlsServerName = flags.TLSServerName
-				} else {
-					tlsServerName = os.Getenv("TILLER_HOST")
-				}
-				if flags.TLSCaCertFile != "" {
-					tlsCaCertFile = flags.TLSCaCertFile
-				} else {
-					tlsCaCertFile = os.Getenv("HELM_HOME") + "/ca.pem"
-				}
-				if flags.TLSKeyFile != "" {
-					tlsKeyFile = flags.TLSKeyFile
-				} else {
-					tlsKeyFile = os.Getenv("HELM_HOME") + "/key.pem"
-				}
-				if flags.TLSCertFile != "" {
-					tlsCertFile = flags.TLSCertFile
-				} else {
-					tlsCertFile = os.Getenv("HELM_HOME") + "/cert.pem"
-				}
-
-				tlsopts := tlsutil.Options{
-					ServerName:         tlsServerName,
-					CaCertFile:         tlsCaCertFile,
-					KeyFile:            tlsKeyFile,
-					CertFile:           tlsCertFile,
-					InsecureSkipVerify: true,
-				}
-
-				tlscfg, err := tlsutil.ClientConfig(tlsopts)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(2)
-				}
-				options = append(options, helm.WithTLS(tlscfg))
-			}
-
 			update := updateConfigCommand{
-				client:     helm.NewClient(options...),
+				client:     createHelmClient(),
 				release:    args[0],
 				values:     flags.cliValues,
 				valueFiles: flags.valueFiles,
@@ -135,16 +138,14 @@ func newUpdatecfgCmd(client helm.Interface) *cobra.Command {
 			return update.run()
 		},
 	}
-	cmd.Flags().StringArrayVar(&flags.cliValues, "set-value", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
-	cmd.Flags().VarP(&flags.valueFiles, "values", "f", "specify values in a YAML file")
+	f := cmd.Flags()
 
-	cmd.Flags().StringVar(&flags.TLSServerName, "tls-hostname", "", "The server name used to verify the hostname on the returned certificates from the server")
-	cmd.Flags().StringVar(&flags.TLSCaCertFile, "tls-ca-cert", DefaultTLSCaCert, "Path to TLS CA certificate file")
-	cmd.Flags().StringVar(&flags.TLSCertFile, "tls-cert", DefaultTLSCert, "Path to TLS certificate file")
-	cmd.Flags().StringVar(&flags.TLSKeyFile, "tls-key", DefaultTLSKeyFile, "Path to TLS key file")
-	cmd.Flags().BoolVar(&flags.TLSVerify, "tls-verify", DefaultTLSVerify, "Enable TLS for request and verify remote")
-	cmd.Flags().BoolVar(&flags.TLSEnable, "tls", DefaultTLSEnable, "Use TLS in helm Client interactions")
+	f.StringArrayVar(&flags.cliValues, "set-value", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
+	f.VarP(&flags.valueFiles, "values", "f", "specify values in a YAML file")
 
+	if !isHelm3() {
+		addCommonCmdOptions(f)
+	}
 	return cmd
 }
 
