@@ -1,0 +1,34 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "Xtfe96NvDi6//e4QRZVN+DOu3Xk=",
+			"path": "k8s.io/client-go/util/homedir",
+			"revision": "1b1a35e41a57053c50fd15d9743d2ed2cc144e4b",
+			"revisionTime": "2019-12-22T07:55:32Z"
+		},
+		{
+			"path": "k8s.io/helm/pkg/helm",
+			"revision": "release-2.16",
+			"version": "release-2.16"
+		},
+		{
+			"checksumSHA1": "mPDo9VfRHfkggfkAxlcBS1myPHA=",
+			"path": "k8s.io/helm/pkg/helm/environment",
+			"revision": "bbdfe5e7803a12bbdf97e94cd847859890cf4050",
+			"revisionTime": "2019-11-06T22:19:03Z",
+			"version": "release-2.16",
+			"versionExact": "release-2.16"
+		},
+		{
+			"checksumSHA1": "fnUqknw3Pmo4DVIyEeNlVIdhnWM=",
+			"path": "k8s.io/helm/pkg/helm/helmpath",
+			"revision": "bbdfe5e7803a12bbdf97e94cd847859890cf4050",
+			"revisionTime": "2019-11-06T22:19:03Z",
+			"version": "release-2.16",
+			"versionExact": "release-2.16"
+		}
+	],
+	"rootPath": "github.com/bluebosh/helm-update-config"
+}
