@@ -3,7 +3,7 @@
 # Shamelessly copied from https://github.com/technosophos/helm-template
 
 PROJECT_NAME="helm-update-config"
-PROJECT_GH="bluebosh/${PROJECT_NAME}"
+PROJECT_GH="mattcui/${PROJECT_NAME}"
 
 : "${HELM_PLUGIN_DIR:=\"$(helm home --debug=false)/plugins/helm-update-config\"}"
 
@@ -108,7 +108,7 @@ fail_trap() {
   result=$?
   if [ "$result" != "0" ]; then
     echo "Failed to install ${PROJECT_NAME}"
-    printf "\tFor support, go to https://github.com/bluebosh/helm-update-config"
+    printf "\tFor support, go to https://github.com/mattcui/helm-update-config"
   fi
   exit $result
 }
