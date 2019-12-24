@@ -45,14 +45,13 @@ initOS() {
     msys*) OS='windows';;
     # Minimalist GNU for Windows
     mingw*) OS='windows';;
-    darwin) OS='macos';;
   esac
 }
 
 # verifySupported checks that the os/arch combination is supported for
 # binary builds.
 verifySupported() {
-  local supported="linux-amd64\nfreebsd-amd64\nmacos-amd64\nwindows-amd64"
+  local supported="linux-amd64\nfreebsd-amd64\nmacos-amd64\nwindows-amd64\ndarwin-amd64"
   if ! echo "${supported}" | grep -q "${OS}-${ARCH}"; then
     echo "No prebuild binary for ${OS}-${ARCH}."
     exit 1
@@ -67,7 +66,7 @@ verifySupported() {
 # getDownloadURL checks the latest available version.
 getDownloadURL() {
   local version
-  version=$(git -C "$HELM_PLUGIN_DIR" describe --tags --exact-match 2>/dev/null)
+  version=$(git -C "$HELM_PLUGIN_DIR" describe --tags --exact-match 2>/dev/null || true)
   if [ -n "$version" ]; then
     DOWNLOAD_URL="https://github.com/${PROJECT_GH}/releases/download/${version}/helm-update-config_${OS}"
   else
