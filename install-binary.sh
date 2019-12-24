@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -x
 
 # Shamelessly copied from https://github.com/technosophos/helm-template
 
